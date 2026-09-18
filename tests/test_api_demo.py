@@ -267,3 +267,31 @@ def test_put_categories_round_trip(client):
 
     r = client.put("/api/organize/categories", json={"items": [{"nope": 1}]})
     assert r.status_code == 400
+
+
+def test_demo_scan_preserves_seeded_mailbox(client):
+    """A demo scan runs the real scanner against the seeded mailbox and must
+    leave the counts and read state as they were (regression: it used to
+    mark every message gone because the demo client listed no ids)."""
+    c, _ = client
+    before = c.get("/api/overview").json()
+    assert before["messages_total"] > 0
+
+    resp = c.post("/api/scan", json={"window_months": 0, "full": False})
+    assert resp.status_code == 200
+    state = _wait_for_job(c, timeout=60)
+    assert state["state"] == "done", state
+
+    after = c.get("/api/overview").json()
+    assert after["messages_total"] == before["messages_total"]
+    assert after["unread_total"] == before["unread_total"]
+    assert after["senders_total"] == before["senders_total"]
+
+    # A full scan refetches metadata through the demo client and must agree too.
+    resp = c.post("/api/scan", json={"window_months": 0, "full": True})
+    assert resp.status_code == 200
+    state = _wait_for_job(c, timeout=120)
+    assert state["state"] == "done", state
+    again = c.get("/api/overview").json()
+    assert again["messages_total"] == before["messages_total"]
+    assert again["unread_total"] == before["unread_total"]

@@ -308,7 +308,8 @@ function closeModal() {
 const state = {
   activeTab: storageGet("inboxCleanup.activeTab", "overview"),
   status: null,
-  lastJobKey: null, // `${id}:${state}` of the last-seen job, to detect transitions
+  lastJobKey: null,
+  statusObserved: false, // `${id}:${state}` of the last-seen job, to detect transitions
   pollTimer: null,
 
   overview: null,
@@ -362,12 +363,18 @@ async function pollStatusTick() {
 
   const job = data.job;
   const curKey = job ? `${job.id}:${job.state}` : null;
-  if (prevKey && job && curKey !== prevKey) {
-    const prevWasRunning = prevKey.endsWith(":running");
-    if (prevWasRunning && job.state !== "running") {
+  // A job counts as finished when it was running last time we looked, or
+  // when it is a job we have never seen and is already over (fast jobs can
+  // complete before the first poll). The first tick after page load only
+  // records what is there, so a stale finished job never toasts.
+  if (state.statusObserved && job && curKey !== prevKey && job.state !== "running") {
+    const prevId = prevKey ? prevKey.split(":")[0] : null;
+    const prevWasRunning = !!prevKey && prevKey.endsWith(":running");
+    if (prevWasRunning || job.id !== prevId) {
       onJobFinished(job);
     }
   }
+  state.statusObserved = true;
   state.lastJobKey = curKey;
 
   schedulePoll(job && job.state === "running" ? 2000 : 10000);
@@ -1135,6 +1142,12 @@ async function runBulkAction(actionRequest, titleLabel) {
             return;
           }
           closeModal();
+          // The senders are now being processed; a stale selection must not
+          // leak into the next action (rows that leave the list would
+          // otherwise stay selected invisibly).
+          state.senders.selected.clear();
+          renderSendersTable();
+          renderBulkBar();
           toast("Action started.", "success");
           pollStatusSoon();
         },
@@ -1527,11 +1540,15 @@ async function loadActivity() {
 function renderDetail(entry) {
   const d = entry.detail || {};
   const parts = [];
-  if (d.method) parts.push(`Method: ${esc(d.method)}`);
+  // The unsubscribe method may be reported as "method" or "kind" (backends
+  // vary); render it as the same badge used in the Subscriptions table.
+  const method = d.method || d.kind;
+  if (method) parts.push(unsubBadgeHtml(method));
   if (d.url) parts.push(`<a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Open link</a>`);
+  if (d.to) parts.push(`To: ${esc(d.to)}`);
   if (d.filter_id) parts.push(`Filter: ${esc(d.filter_id)}`);
   if (d.label) parts.push(`Label: ${esc(d.label)}`);
-  const known = new Set(["method", "url", "filter_id", "label"]);
+  const known = new Set(["method", "kind", "url", "to", "filter_id", "label"]);
   Object.keys(d).forEach((k) => {
     if (known.has(k)) return;
     parts.push(`${esc(titleCaseKey(k))}: ${esc(d[k])}`);

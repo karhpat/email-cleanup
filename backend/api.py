@@ -36,7 +36,7 @@ from backend.store import Store
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 store = Store(config.db_path)
-gmail = DemoGmailClient() if config.demo else GmailClient(config)
+gmail = DemoGmailClient(store) if config.demo else GmailClient(config)
 job_runner = JobRunner()
 
 if config.demo:

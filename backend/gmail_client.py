@@ -408,10 +408,19 @@ class GmailClient:
 
 
 class DemoGmailClient:
-    """Same public interface as GmailClient; never touches the network."""
+    """Same public interface as GmailClient; never touches the network.
 
-    def __init__(self):
+    Given a Store, it plays the part of Gmail for scans: `list_message_ids`
+    pages through the seeded mailbox (honouring `is:read` for the read-state
+    sweep and excluding trashed messages) and `get_metadata_batch` rebuilds
+    raw metadata dicts from stored rows. Without a Store both return nothing.
+    """
+
+    demo = True
+
+    def __init__(self, store=None):
         self.calls: list[dict] = []
+        self._store = store
         self._email = "demo.user@example.com"
         self._filter_n = 0
         self._msg_n = 0
@@ -441,11 +450,64 @@ class DemoGmailClient:
         self, query: str, page_token: str | None = None
     ) -> tuple[list[tuple[str, str]], Optional[str], int]:
         self._log("list_message_ids", query=query, page_token=page_token)
-        return [], None, 0
+        if self._store is None:
+            return [], None, 0
+        read_only = "is:read" in query
+        offset = int(page_token) if page_token else 0
+        sql = "SELECT id, thread_id FROM messages WHERE in_trash=0"
+        if read_only:
+            sql += " AND is_unread=0"
+        sql += " ORDER BY internal_ts DESC, id LIMIT 501 OFFSET ?"
+        rows = self._store.conn.execute(sql, (offset,)).fetchall()
+        page = [(r["id"], r["thread_id"] or "") for r in rows[:500]]
+        next_token = str(offset + 500) if len(rows) > 500 else None
+        total = self._store.conn.execute(
+            "SELECT COUNT(*) c FROM messages WHERE in_trash=0" + (" AND is_unread=0" if read_only else "")
+        ).fetchone()["c"]
+        time.sleep(0.15)  # let the progress bar move in the demo
+        return page, next_token, total
 
     def get_metadata_batch(self, ids: list[str]) -> list[dict]:
         self._log("get_metadata_batch", ids=list(ids))
-        return []
+        if self._store is None or not ids:
+            return []
+        import json as _json
+
+        out = []
+        for start in range(0, len(ids), 500):
+            chunk = ids[start : start + 500]
+            rows = self._store.conn.execute(
+                f"SELECT * FROM messages WHERE id IN ({','.join('?' * len(chunk))})", chunk
+            ).fetchall()
+            for r in rows:
+                try:
+                    labels = _json.loads(r["labels"]) if r["labels"] else []
+                except (TypeError, ValueError):
+                    labels = []
+                if not labels:
+                    labels = [l for l, on in (
+                        ("UNREAD", r["is_unread"]), ("INBOX", r["in_inbox"]),
+                        ("STARRED", r["is_starred"]), ("IMPORTANT", r["is_important"]),
+                    ) if on]
+                    for label, cat in _CATEGORY_MAP.items():
+                        if cat == r["category"]:
+                            labels.append(label)
+                headers = [
+                    {"name": "From", "value": r["sender_raw"] or f'{r["sender_name"] or ""} <{r["sender"]}>'},
+                    {"name": "Subject", "value": r["subject"] or ""},
+                ]
+                for name, col in (("List-Unsubscribe", "list_unsubscribe"),
+                                  ("List-Unsubscribe-Post", "list_unsubscribe_post"),
+                                  ("List-Id", "list_id")):
+                    if r[col]:
+                        headers.append({"name": name, "value": r[col]})
+                out.append({
+                    "id": r["id"], "threadId": r["thread_id"], "labelIds": labels,
+                    "snippet": r["snippet"] or "", "internalDate": str(int(r["internal_ts"]) * 1000),
+                    "sizeEstimate": r["size"], "payload": {"headers": headers},
+                })
+        time.sleep(0.05)
+        return out
 
     def batch_modify(self, ids: list[str], add: list[str] | None = None, remove: list[str] | None = None) -> None:
         self._log("batch_modify", ids=list(ids), add=add, remove=remove)
