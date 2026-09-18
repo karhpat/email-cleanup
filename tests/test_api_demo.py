@@ -249,6 +249,7 @@ def test_index_route(client):
 
 
 def test_put_categories_round_trip(client):
+    client, _api = client
     r = client.get("/api/organize/categories")
     assert r.status_code == 200
     items = r.json()["items"]
