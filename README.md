@@ -111,6 +111,12 @@ To run tests:
 .venv/bin/pytest
 ```
 
+To drive the dashboard end to end in a headless browser (starts nothing itself; see the docstring in `tests/browser_smoke.py` for the two commands):
+
+```bash
+.venv/bin/python tests/browser_smoke.py
+```
+
 To run with demo data (synthetic mailbox, no Gmail access):
 
 ```bash
