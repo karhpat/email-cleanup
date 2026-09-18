@@ -125,6 +125,9 @@ class Organizer:
         conditions, params = self._candidate_conditions(scope, days)
         if not reclassify:
             conditions.append("c.message_id IS NULL")
+        else:
+            # A reclassify never discards a category the user set by hand.
+            conditions.append("(c.message_id IS NULL OR c.overridden = 0)")
 
         sql = f"""
             SELECT m.id, m.sender, m.sender_name, m.subject, m.snippet, m.internal_ts

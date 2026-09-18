@@ -1,7 +1,6 @@
 """Tests for backend/classifier.py."""
 from __future__ import annotations
 
-import types
 from types import SimpleNamespace
 
 import anthropic

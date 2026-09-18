@@ -225,15 +225,16 @@ class Classifier:
         response = self._call_with_retry(batch, model)
 
         if response is None:
-            # Exhausted retries without a usable response: treat as refused.
-            return self._skip_all(batch, "refused")
+            # Exhausted retries without a usable response.
+            return self._skip_all(batch, "api_error", model)
 
         if response.stop_reason == "refusal":
-            return self._skip_all(batch, "refused")
+            return self._skip_all(batch, "refused", model)
 
         if response.stop_reason == "max_tokens":
             if len(batch) <= 1:
-                return self._skip_all(batch, "refused")
+                # Can't split a single email any further.
+                return self._skip_all(batch, "max_tokens", model)
             mid = len(batch) // 2
             left = self._classify_batch_with_retry(batch[:mid], model)
             right = self._classify_batch_with_retry(batch[mid:], model)
@@ -349,7 +350,7 @@ class Classifier:
         return out
 
     def _skip_all(
-        self, batch: list[EmailForClassification], reason: str
+        self, batch: list[EmailForClassification], reason: str, model: str
     ) -> list[ClassificationResult]:
         return [
             ClassificationResult(
@@ -357,7 +358,7 @@ class Classifier:
                 category="skip",
                 confidence=0.0,
                 reason=reason,
-                model=self.cheap_model,
+                model=model,
             )
             for e in batch
         ]
@@ -419,7 +420,7 @@ class FakeClassifier:
         return out
 
     def _classify_one(self, email: EmailForClassification) -> ClassificationResult:
-        haystack = " ".join([email.subject or "", email.snippet or ""])
+        haystack = " ".join([email.sender or "", email.subject or "", email.snippet or ""])
 
         for pattern, category in _KEYWORD_RULES:
             if pattern.search(haystack) and category in self.category_keys:
