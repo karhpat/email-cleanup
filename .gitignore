@@ -1,0 +1,20 @@
+# secrets & local state — never commit
+credentials.json
+token.json
+.env
+data/
+*.db
+*.db-journal
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# misc
+.DS_Store
+node_modules/
+playwright-report/
+test-results/
