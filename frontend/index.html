@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inbox Cleanup</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="toasts" class="toast-region" aria-live="polite" aria-atomic="false"></div>
+
+<header class="app-header">
+  <div class="app-header-row">
+    <div class="app-title">
+      <span class="app-name">Inbox Cleanup</span>
+      <span id="modeBadge" class="badge badge-demo hidden">Demo</span>
+    </div>
+    <div class="app-header-right">
+      <span id="accountEmail" class="account-email"></span>
+      <div id="jobPill" class="job-pill hidden" role="status" aria-live="polite">
+        <span id="jobPillText" class="job-pill-text"></span>
+        <div class="job-pill-track"><div id="jobPillBar" class="job-pill-bar"></div></div>
+      </div>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" type="button" role="tab" id="tabbtn-overview" data-tab="overview" aria-selected="true" aria-controls="panel-overview">Overview</button>
+    <button class="tab" type="button" role="tab" id="tabbtn-subscriptions" data-tab="subscriptions" aria-selected="false" aria-controls="panel-subscriptions">Subscriptions</button>
+    <button class="tab" type="button" role="tab" id="tabbtn-organize" data-tab="organize" aria-selected="false" aria-controls="panel-organize">Organize</button>
+    <button class="tab" type="button" role="tab" id="tabbtn-activity" data-tab="activity" aria-selected="false" aria-controls="panel-activity">Activity</button>
+    <button class="tab" type="button" role="tab" id="tabbtn-settings" data-tab="settings" aria-selected="false" aria-controls="panel-settings">Settings</button>
+  </nav>
+</header>
+
+<main id="app" class="app-main">
+  <section id="panel-overview" class="panel" role="tabpanel" aria-labelledby="tabbtn-overview"></section>
+  <section id="panel-subscriptions" class="panel" role="tabpanel" aria-labelledby="tabbtn-subscriptions" hidden></section>
+  <section id="panel-organize" class="panel" role="tabpanel" aria-labelledby="tabbtn-organize" hidden></section>
+  <section id="panel-activity" class="panel" role="tabpanel" aria-labelledby="tabbtn-activity" hidden></section>
+  <section id="panel-settings" class="panel" role="tabpanel" aria-labelledby="tabbtn-settings" hidden></section>
+</main>
+
+<div id="modalRoot"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
