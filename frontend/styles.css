@@ -225,6 +225,7 @@ a { color: var(--accent); }
 }
 
 .panel { display: flex; flex-direction: column; gap: 16px; }
+.panel[hidden] { display: none; }
 
 /* ---------- generic building blocks ---------- */
 
@@ -262,7 +263,7 @@ h2.section-title {
   border-color: var(--accent);
   color: #ffffff;
 }
-.btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn-primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
 
 .btn-secondary { background: var(--surface-2); }
 
@@ -496,6 +497,12 @@ table.data-table {
   min-width: 720px;
   font-variant-numeric: tabular-nums;
   background: var(--surface-1);
+}
+
+/* Compact preview/summary tables inside modals size to their (few) columns
+   instead of inheriting the wide list-table minimum. */
+.modal table.data-table {
+  min-width: 0;
 }
 
 table.data-table th, table.data-table td {

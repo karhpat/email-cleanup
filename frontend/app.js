@@ -474,7 +474,7 @@ function unsubBadgeHtml(kind) {
   const map = {
     one_click: "One-click", mailto: "Mailto", http: "Link", none: "None",
   };
-  const cls = kind === "none" ? "pill-neutral" : "pill";
+  const cls = kind === "none" ? "pill pill-neutral" : "pill";
   return `<span class="${cls}">${esc(map[kind] || kind)}</span>`;
 }
 
@@ -560,7 +560,7 @@ function syncScanControls() {
     const msg = job.progress && job.progress.message ? job.progress.message : "";
     const done = job.progress ? job.progress.done : 0;
     const total = job.progress ? job.progress.total : 0;
-    progressLine.textContent = total > 0 ? `Scanning… ${done}/${total} ${msg}` : `Scanning… ${msg}`;
+    progressLine.textContent = `Scanning… ${msg || (total > 0 ? `${done}/${total}` : "")}`.trim();
   } else {
     progressLine.classList.add("hidden");
   }
@@ -1074,8 +1074,9 @@ async function handleLoadMoreSenders() {
 /* ---- bulk actions: preview -> confirm -> execute ---- */
 
 function actionPreviewRowsHtml(action, items) {
+  let inner;
   if (action === "stop") {
-    return `<table class="data-table"><thead><tr><th>Sender</th><th>Method</th><th>Unsubscribe</th><th>Block</th></tr></thead><tbody>
+    inner = `<table class="data-table"><thead><tr><th>Sender</th><th>Method</th><th>Unsubscribe</th><th>Block</th></tr></thead><tbody>
       ${items.map((it) => `<tr>
         <td>${esc(it.display_name || it.sender)}</td>
         <td>${unsubBadgeHtml(it.unsubscribe_method)}</td>
@@ -1083,9 +1084,8 @@ function actionPreviewRowsHtml(action, items) {
         <td>${it.will_block ? "Yes" : "No"}</td>
       </tr>`).join("")}
     </tbody></table>`;
-  }
-  if (action === "purge") {
-    return `<table class="data-table"><thead><tr><th>Sender</th><th class="num">Will trash</th><th class="num">Skip starred</th><th class="num">Skip important</th></tr></thead><tbody>
+  } else if (action === "purge") {
+    inner = `<table class="data-table"><thead><tr><th>Sender</th><th class="num">Will trash</th><th class="num">Skip starred</th><th class="num">Skip important</th></tr></thead><tbody>
       ${items.map((it) => `<tr>
         <td>${esc(it.display_name || it.sender)}</td>
         <td class="num">${fmtInt(it.purge_count)}</td>
@@ -1093,11 +1093,13 @@ function actionPreviewRowsHtml(action, items) {
         <td class="num">${fmtInt(it.skipped_important)}</td>
       </tr>`).join("")}
     </tbody></table>`;
+  } else {
+    // keep / reactivate
+    inner = `<table class="data-table"><thead><tr><th>Sender</th></tr></thead><tbody>
+      ${items.map((it) => `<tr><td>${esc(it.display_name || it.sender)}</td></tr>`).join("")}
+    </tbody></table>`;
   }
-  // keep / reactivate
-  return `<table class="data-table"><thead><tr><th>Sender</th></tr></thead><tbody>
-    ${items.map((it) => `<tr><td>${esc(it.display_name || it.sender)}</td></tr>`).join("")}
-  </tbody></table>`;
+  return `<div class="table-scroll">${inner}</div>`;
 }
 
 function totalsHtml(totals) {
@@ -1303,7 +1305,7 @@ function syncClassifyProgress() {
     const done = job.progress ? job.progress.done : 0;
     const total = job.progress ? job.progress.total : 0;
     const msg = job.progress && job.progress.message ? job.progress.message : "";
-    line.textContent = total > 0 ? `Classifying… ${done}/${total} ${msg}` : `Classifying… ${msg}`;
+    line.textContent = `Classifying… ${msg || (total > 0 ? `${done}/${total}` : "")}`.trim();
   } else {
     line.classList.add("hidden");
   }
@@ -1466,7 +1468,7 @@ function handleApplyOpen() {
     }).join("");
   const bodyHtml = `
     <p>Apply labels to classified messages${archive ? ", archive them" : ""}${markRead ? ", and mark them read" : ""}. The "skip" category is never labeled.</p>
-    <table class="data-table"><thead><tr><th>Category</th><th class="num">Messages</th></tr></thead><tbody>${rows || '<tr><td colspan="2" class="muted">No categorized messages yet.</td></tr>'}</tbody></table>
+    <div class="table-scroll"><table class="data-table"><thead><tr><th>Category</th><th class="num">Messages</th></tr></thead><tbody>${rows || '<tr><td colspan="2" class="muted">No categorized messages yet.</td></tr>'}</tbody></table></div>
   `;
   openModal({
     title: "Apply labels",
